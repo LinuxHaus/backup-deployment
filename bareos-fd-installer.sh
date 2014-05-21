@@ -1,21 +1,23 @@
 #!/bin/bash
 CLIENT=""
 AUTODIRNAME=""
+AUTOFDIPADDRESS=""
 
-TEMP=`getopt -o c:d: --long client:,director: -n $0 -- "$@"`
+TEMP=`getopt -o c:d:a --long client:,director:,fd-address: -n $0 -- "$@"`
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
 eval set -- "$TEMP"
 while true ; do
 	case "$1" in
 		-c|--client) CLIENT=$2; shift 2;;
 		-d|--director) AUTODIRNAME=$2; shift 2 ;;
+		-a|--fd-address) AUTOFDIPADDRESS=$2; shift 2 ;;
 		--) shift ; break ;;
 		*) echo "Internal error!" ; exit 1 ;;
 	esac
 done
 
 if [ x$CLIENT == x ]; then
-	echo "usage: $0 --client CLIENTNAME [ --director DIRECTORNAME ]"
+	echo "usage: $0 --client CLIENTNAME [--director DIRECTORNAME] [--fd-address FD-bind-IP-address]"
 	exit 1
 fi
 if [ x$AUTODIRNAME == x ]; then
@@ -47,11 +49,6 @@ Client {
    AutoPrune = yes                     # Prune expired Jobs/Files
    Maximum Concurrent Jobs = 10
 }
-EOF
-sed '
-	s/AUTOCLIENTHOSTNAME/'$CLIENT'/g;
-	s/AUTOFDPASS/'$AUTOFDPASS'/g;
-' >/etc/bareos/job/$CLIENT.conf <<'EOF'
 Job {
   Name = "AUTOCLIENTHOSTNAME"
   Client = AUTOCLIENTHOSTNAME
@@ -65,6 +62,7 @@ sed '
 	s/AUTOCLIENTHOSTNAME/'$CLIENT'/g;
 	s/AUTODIRNAME/'$AUTODIRNAME'/g;
 	s/AUTOFDPASS/'$AUTOFDPASS'/g;
+	s/AUTOFDIPADDRESS/'$AUTOFDIPADDRESS'/g;
 ' <<'SKRIPT_EOF' | ssh -t $CLIENT
 set -x
 case $(cat /etc/debian_version) in
@@ -113,6 +111,7 @@ Director {
 FileDaemon {                          # this is me
   Name = AUTOCLIENTHOSTNAME
   Maximum Concurrent Jobs = 20
+	# AUTOCONF FDAddress = AUTOFDIPADDRESS
 
   # remove comment in next line to load plugins from specified directory
   # Plugin Directory = /usr/lib/bareos/plugins
@@ -128,6 +127,10 @@ Messages {
   director = AUTODIRNAME-dir = all, !skipped, !restored
 }
 EOF1
+FDIP=AUTOFDIPADDRESS
+if [ x$FDIP != x ]; then
+  sed -i 's/# AUTOCONF FDAddress/FDAddress/' /etc/bareos/bareos-fd.conf
+fi
 /etc/init.d/bareos-fd restart
 SKRIPT_EOF
 # vim: ts=2 sw=2 sts=2 sr noet
