@@ -20,7 +20,7 @@ cat <<-'EOF'
 EOF
 }
 
-OPTIONS=`getopt -o h --long help -n "$0" -- "$@"`
+OPTIONS=`getopt -o h --long help,backuptool: -n "$0" -- "$@"`
 if [ $? != 0 ] ; then
 	usage >&2
 	exit 1
@@ -29,6 +29,7 @@ eval set -- "$OPTIONS"
 while true; do
 	case "$1" in
 		-h|--help) usage; shift; exit 1 ;;
+		--backuptool) BACKUPTOOL=$2; shift 2 ;;
 		--) shift; break ;;
 		*) echo $0 unrecognized option $1; usage >&2 ;;
 	esac
@@ -38,8 +39,10 @@ while read host; do
 	LC_ALL=C ssh -x -o Tunnel=no $host "(
 	if dpkg -la | egrep -q \"^ii\s*(bacula-fd|bareos-filedaemon)\"; then
 		HASBACKUP=1;
+		exit 0
 	else
 		echo Need Backup: $host
+		exit 1
 	fi
 	)"
 done
