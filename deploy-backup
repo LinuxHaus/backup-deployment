@@ -34,20 +34,27 @@ while true; do
 		*) echo $0 unrecognized option $1; usage >&2 ;;
 	esac
 done
-
 while read host; do
 	if ping -c1 $host >/dev/null 2>&1; then
-	LC_ALL=C ssh -x -o Tunnel=no $host "(
-	if which dpkg > /dev/null 2>&1; then
-		if dpkg -la | egrep -q \"^ii\s*(bacula-fd|bareos-filedaemon)\"; then
-			echo Ok: $host
+		LC_ALL=C ssh -x -o Tunnel=no $host "(
+		if which dpkg > /dev/null 2>&1; then
+			if dpkg -la | egrep -q \"^ii\s*(bacula-fd|bareos-filedaemon)\"; then
+				echo Ok: $host
+			else
+				echo Need Backup: $host
+			fi
+		elif [ -e /etc/SuSE-release ]; then
+			if rpm -qa | grep -q bareos-filedaemon; then
+				echo Ok: $host
+			else
+				echo SuSE: $name, execute ssh $name -t zypper install bareos-filedaemon
+			fi
+		elif [ -e /etc/redhat-release ]; then
+				echo RedHat: $name, no check defined
 		else
-			echo Need Backup: $host
+			echo No Debian/SuSE/RedHat: $host
 		fi
-	else
-		echo No dpkg: $host
-	fi
-	)"
+		)" || true
 	else
 		echo Unreachable: $host
 	fi
