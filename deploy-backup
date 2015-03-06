@@ -37,12 +37,17 @@ done
 
 while read host; do
 	LC_ALL=C ssh -x -o Tunnel=no $host "(
-	if dpkg -la | egrep -q \"^ii\s*(bacula-fd|bareos-filedaemon)\"; then
-		HASBACKUP=1;
-		exit 0
+	if which dpkg > /dev/null; then
+		if dpkg -la | egrep -q \"^ii\s*(bacula-fd|bareos-filedaemon)\"; then
+			HASBACKUP=1;
+			exit 0
+		else
+			echo Need Backup: $host
+			exit 1
+		fi
 	else
-		echo Need Backup: $host
-		exit 1
+		echo No dpkg: $host
+		exit 2
 	fi
 	)"
 done
