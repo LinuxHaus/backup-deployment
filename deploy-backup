@@ -36,19 +36,20 @@ while true; do
 done
 
 while read host; do
+	if ping -c1 $host >/dev/null 2>&1; then
 	LC_ALL=C ssh -x -o Tunnel=no $host "(
-	if which dpkg > /dev/null; then
+	if which dpkg > /dev/null 2>&1; then
 		if dpkg -la | egrep -q \"^ii\s*(bacula-fd|bareos-filedaemon)\"; then
-			HASBACKUP=1;
-			exit 0
+			echo Ok: $host
 		else
 			echo Need Backup: $host
-			exit 1
 		fi
 	else
 		echo No dpkg: $host
-		exit 2
 	fi
 	)"
+	else
+		echo Unreachable: $host
+	fi
 done
 # vim: ts=2 sw=2 sts=2 sr noet
