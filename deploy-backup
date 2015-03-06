@@ -1,0 +1,46 @@
+#!/bin/bash
+# Copyright 2011 Adrian Reyer
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+usage () {
+cat <<-'EOF'
+	Usege: $0
+EOF
+}
+
+OPTIONS=`getopt -o h --long help -n "$0" -- "$@"`
+if [ $? != 0 ] ; then
+	usage >&2
+	exit 1
+fi
+eval set -- "$OPTIONS"
+while true; do
+	case "$1" in
+		-h|--help) usage; shift; exit 1 ;;
+		--) shift; break ;;
+		*) echo $0 unrecognized option $1; usage >&2 ;;
+	esac
+done
+
+while read host; do
+	LC_ALL=C ssh -x -o Tunnel=no $host "(
+	if dpkg -la | egrep -q \"^ii\s*(bacula-fd|bareos-filedaemon)\"; then
+		HASBACKUP=1;
+	else
+		echo Need Backup: $host
+	fi
+	)"
+done
+# vim: ts=2 sw=2 sts=2 sr noet
